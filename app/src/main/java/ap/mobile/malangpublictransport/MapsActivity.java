@@ -2,10 +2,13 @@ package ap.mobile.malangpublictransport;
 
 import android.Manifest;
 import android.annotation.SuppressLint;
+import android.app.ActivityManager;
+import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.location.Location;
 import android.os.Bundle;
+import android.os.Debug;
 import android.preference.PreferenceManager;
 import android.support.annotation.NonNull;
 import android.support.design.widget.Snackbar;
@@ -112,6 +115,30 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
 
         this.mFusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
 
+
+    }
+
+    private void showMemoryInfo() {
+        ActivityManager activityManager = (ActivityManager) getSystemService(Context.ACTIVITY_SERVICE);
+        ActivityManager.MemoryInfo memoryInfo = new ActivityManager.MemoryInfo();
+        activityManager.getMemoryInfo(memoryInfo);
+
+        // Memory information in bytes
+        long totalMemory = memoryInfo.totalMem;
+        long usedMemory = memoryInfo.totalMem - memoryInfo.availMem;
+        long availableMemory = memoryInfo.availMem;
+
+        // Convert bytes to megabytes
+        long totalMemoryMB = totalMemory / (1024 * 1024);
+        long usedMemoryMB = usedMemory / (1024 * 1024);
+        long availableMemoryMB = availableMemory / (1024 * 1024);
+
+        // Display the memory information
+        String memoryInfoStr = "Total Memory: " + totalMemoryMB + " MB\n"
+                + "Used Memory: " + usedMemoryMB + " MB\n"
+                + "Available Memory: " + availableMemoryMB + " MB";
+
+        Log.d("MemoryInfo", memoryInfoStr);
     }
 
     @Override
@@ -210,6 +237,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     @Override
     public void onMapLongClick(LatLng latLng) {
 
+        showMemoryInfo();
         LatLng latlong = new LatLng(-7.949296561786135,112.61467047035694);
 
         Log.d("graph", String.valueOf(graph));
@@ -239,6 +267,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                 CDM.getDistance(this),
                 this);
         dijkstraTask.execute();
+
 
         this.dijkstraDialog = new MaterialDialog.Builder(this)
                 .content("Calculating routes...")

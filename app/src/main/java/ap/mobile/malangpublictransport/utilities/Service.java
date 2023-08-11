@@ -45,7 +45,8 @@ public class Service {
     public static void getManagedPoints(Context context, final IServiceInterface callback) {
         String rawManagedPointsJson = readRawString(context, R.raw.managedpoints);
 
-        String link = "https://amwgr.com/managedpoints.json";
+        String link = "http://amwgr.com/managedpoints.json";
+
         StringRequest stringRequest = new StringRequest(Request.Method.GET, link,
                 new Response.Listener<String>() {
                 @Override
@@ -54,7 +55,8 @@ public class Service {
                         ArrayList<Line> lines = new ArrayList<>();
                         JSONObject json = new JSONObject(response);
                         JSONArray lineJSON = json.getJSONArray("lines");
-                        for(int i=0; i<lineJSON.length(); i++){
+                        Log.d("line name", String.valueOf(lineJSON));
+                        for (int i = 0; i < lineJSON.length(); i++) {
                             JSONObject lineArray = lineJSON.getJSONObject(i);
                             Line line = new Line();
                             line.id = Integer.valueOf(lineArray.getString("idline"));
@@ -64,11 +66,11 @@ public class Service {
 
 
                             JSONArray pathArray = lineArray.getJSONArray("path");
-                            Log.d("line name", line.name);
+
 
                             LinkedList<PointTransport> path = new LinkedList<>();
 
-                            for(int j = 0; j < pathArray.length(); j++) {
+                            for (int j = 0; j < pathArray.length(); j++) {
                                 JSONObject pointJson = pathArray.getJSONObject(j);
 
                                 PointTransport point = new PointTransport(
@@ -79,7 +81,7 @@ public class Service {
                                         line.id,
                                         line.name,
                                         line.direction,
-                                        "#"+Integer.toHexString(line.color),
+                                        "#" + Integer.toHexString(line.color),
                                         Integer.valueOf(pointJson.getString("sequence")),
                                         null,
                                         null
@@ -93,7 +95,7 @@ public class Service {
 
                         JSONArray interArray = json.getJSONArray("interchanges");
 
-                        for(int h = 0; h<interArray.length(); h++) {
+                        for (int h = 0; h < interArray.length(); h++) {
 
                             JSONObject interchangeJson = interArray.getJSONObject(h);
 
@@ -105,7 +107,7 @@ public class Service {
 
                             JSONArray pointsJson = interchangeJson.getJSONArray("points");
 
-                            for(int k=0; k<pointsJson.length(); k++) {
+                            for (int k = 0; k < pointsJson.length(); k++) {
                                 JSONObject pointJson = pointsJson.getJSONObject(k);
                                 PointTransport point = new PointTransport();
                                 point.id = pointJson.getString("idpoint");
@@ -115,114 +117,113 @@ public class Service {
                             interchange.pointIds.addAll(pointIds);
                             interchanges.add(interchange);
                         }
-                        if(callback!=null)
+                        if (callback != null)
                             callback.onPointsObtained(lines, interchanges);
-                    } catch (JSONException e) {
+                    } catch (JSONException e){
                         e.printStackTrace();
                         if(callback!= null)
                             callback.onPointsRequestError(e.getMessage());
                     }
                 }
-            }, new Response.ErrorListener() {
-                @Override
-                public void onErrorResponse(VolleyError error) {
-
-                }
-            });
+            }, volleyError -> Toast.makeText(
+                        context,
+                        volleyError.getMessage(),
+                        Toast.LENGTH_SHORT)
+                .show());
             RequestQueue requestQueue = Volley.newRequestQueue(context);
             requestQueue.add(stringRequest);
 
 
 
-        try {
-            JSONObject response = new JSONObject(rawManagedPointsJson);
-            JSONArray linesJson = response.getJSONArray("lines");
-
-            ArrayList<Line> lines = new ArrayList<>();
-
-            for(int i=0; i<linesJson.length();i++) {
-                JSONObject lineJson = linesJson.getJSONObject(i);
-                /* "idline": "1", "name": "AL", "direction": "O", "color": "#FF0000", "path": [] */
-                Line line = new Line();
-                line.id = Integer.valueOf(lineJson.getString("idline"));
-                line.name = lineJson.getString("name");
-                line.direction = lineJson.getString("direction");
-                line.color = Color.parseColor(lineJson.getString("color"));
-
-                JSONArray pathJson = lineJson.getJSONArray("path");
-                Log.d("line name", line.name);
-
-                LinkedList<PointTransport> path = new LinkedList<>();
-
-                for(int j = 0; j<pathJson.length(); j++) {
-                    JSONObject pointJson = pathJson.getJSONObject(j);
-                    /*
-                        String id, double lat, double lng, boolean stop, int idLine,
-                        String lineName, String direction, String color, int sequence,
-                        String adjacentPoints, String interchanges
-                     */
-                    PointTransport point = new PointTransport(
-                            pointJson.getString("idpoint"),
-                            Double.valueOf(pointJson.getString("lat")),
-                            Double.valueOf(pointJson.getString("lng")),
-                            pointJson.getString("stop").equals("1"),
-                            line.id,
-                            line.name,
-                            line.direction,
-                            "#"+Integer.toHexString(line.color),
-                            Integer.valueOf(pointJson.getString("sequence")),
-                            null,
-                            null
-                    );
-                    path.add(point);
-                }
-                line.path = path;
-                lines.add(line);
-
-            }
-
-            ArrayList<Interchange> interchanges = new ArrayList<>();
-
-            JSONArray interchangesJson = response.getJSONArray("interchanges");
-
-            for(int i = 0; i<interchangesJson.length(); i++) {
-
-                JSONObject interchangeJson = interchangesJson.getJSONObject(i);
-
-                Interchange interchange = new Interchange();
-                interchange.idInterchange = interchangeJson.getString("idinterchange");
-                interchange.name = interchangeJson.getString("name");
-
-                Set<String> pointIds = new HashSet<>();
-
-                JSONArray pointsJson = interchangeJson.getJSONArray("points");
-
-                for(int j=0; j<pointsJson.length(); j++) {
-                    JSONObject pointJson = pointsJson.getJSONObject(j);
-                    PointTransport point = new PointTransport();
-                    /*
-                    "idline": "1",
-                    "idpoint": "717",
-                    "sequence": "281",
-                    "stop": "1",
-                    "idinterchange": "4"
-                     */
-                    point.id = pointJson.getString("idpoint");
-                    pointIds.add(point.id);
-                }
-
-                interchange.pointIds.addAll(pointIds);
-                interchanges.add(interchange);
-
-            }
-
-            if(callback!=null)
-                callback.onPointsObtained(lines, interchanges);
-        } catch (JSONException e) {
-            e.printStackTrace();
-            if(callback!= null)
-                callback.onPointsRequestError(e.getMessage());
-        }
+//        try {
+//            JSONObject response = new JSONObject(rawManagedPointsJson);
+//            JSONArray linesJson = response.getJSONArray("lines");
+//
+//            ArrayList<Line> lines = new ArrayList<>();
+//
+//            for(int i=0; i<linesJson.length();i++) {
+//                JSONObject lineJson = linesJson.getJSONObject(i);
+//                /* "idline": "1", "name": "AL", "direction": "O", "color": "#FF0000", "path": [] */
+//                Line line = new Line();
+//                line.id = Integer.valueOf(lineJson.getString("idline"));
+//                line.name = lineJson.getString("name");
+//                line.direction = lineJson.getString("direction");
+//                line.color = Color.parseColor(lineJson.getString("color"));
+//
+//                JSONArray pathJson = lineJson.getJSONArray("path");
+//                Log.d("line name", line.name);
+//
+//                LinkedList<PointTransport> path = new LinkedList<>();
+//
+//                for(int j = 0; j<pathJson.length(); j++) {
+//                    JSONObject pointJson = pathJson.getJSONObject(j);
+//                    /*
+//                        String id, double lat, double lng, boolean stop, int idLine,
+//                        String lineName, String direction, String color, int sequence,
+//                        String adjacentPoints, String interchanges
+//                     */
+//                    PointTransport point = new PointTransport(
+//                            pointJson.getString("idpoint"),
+//                            Double.valueOf(pointJson.getString("lat")),
+//                            Double.valueOf(pointJson.getString("lng")),
+//                            pointJson.getString("stop").equals("1"),
+//                            line.id,
+//                            line.name,
+//                            line.direction,
+//                            "#"+Integer.toHexString(line.color),
+//                            Integer.valueOf(pointJson.getString("sequence")),
+//                            null,
+//                            null
+//                    );
+//                    path.add(point);
+//                }
+//                line.path = path;
+//                lines.add(line);
+//
+//            }
+//
+//            ArrayList<Interchange> interchanges = new ArrayList<>();
+//
+//            JSONArray interchangesJson = response.getJSONArray("interchanges");
+//
+//            for(int i = 0; i<interchangesJson.length(); i++) {
+//
+//                JSONObject interchangeJson = interchangesJson.getJSONObject(i);
+//
+//                Interchange interchange = new Interchange();
+//                interchange.idInterchange = interchangeJson.getString("idinterchange");
+//                interchange.name = interchangeJson.getString("name");
+//
+//                Set<String> pointIds = new HashSet<>();
+//
+//                JSONArray pointsJson = interchangeJson.getJSONArray("points");
+//
+//                for(int j=0; j<pointsJson.length(); j++) {
+//                    JSONObject pointJson = pointsJson.getJSONObject(j);
+//                    PointTransport point = new PointTransport();
+//                    /*
+//                    "idline": "1",
+//                    "idpoint": "717",
+//                    "sequence": "281",
+//                    "stop": "1",
+//                    "idinterchange": "4"
+//                     */
+//                    point.id = pointJson.getString("idpoint");
+//                    pointIds.add(point.id);
+//                }
+//
+//                interchange.pointIds.addAll(pointIds);
+//                interchanges.add(interchange);
+//
+//            }
+//
+//            if(callback!=null)
+//                callback.onPointsObtained(lines, interchanges);
+//        } catch (JSONException e) {
+//            e.printStackTrace();
+//            if(callback!= null)
+//                callback.onPointsRequestError(e.getMessage());
+//        }
 
     }
 
